@@ -15,6 +15,9 @@ const getById = async (req, res) => {
 };
 
 const create = async (req, res) => {
+    if (req.file) {
+    req.body.imageUrl = `/uploads/${req.file.filename}`;
+  }
   const product = await service.create(req.tenantId, req.body);
   const meta = extractRequestMeta(req);
   await writeAuditLog({ tenantId: req.tenantId, userId: req.user.id, action: 'CREATE', tableName: 'products', recordId: product.id, newValues: req.body, ...meta });
@@ -22,6 +25,9 @@ const create = async (req, res) => {
 };
 
 const update = async (req, res) => {
+    if (req.file) {
+    req.body.imageUrl = `/uploads/${req.file.filename}`;
+  }
   const old = await service.getById(req.params.id, req.tenantId);
   const product = await service.update(req.params.id, req.tenantId, req.body);
   const meta = extractRequestMeta(req);

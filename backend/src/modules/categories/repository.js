@@ -58,26 +58,31 @@ const create = async (tenantId, data) => {
 };
 
 const update = async (id, tenantId, data) => {
-  const filtered = {};
+  const fields = [];
+  const values = [];
 
-  for (const key of ALLOWED_UPDATE_FIELDS) {
-    if (data[key] !== undefined) {
-      filtered[key] = data[key];
-    }
+  if (data.name !== undefined) {
+    fields.push('name = ?');
+    values.push(data.name);
   }
 
-  const keys = Object.keys(filtered);
-  if (!keys.length) throw new Error('No fields to update');
+  if (data.parentId !== undefined) {
+    fields.push('parent_id = ?');
+    values.push(data.parentId);
+  }
 
-  const setClause = keys
-    .map(k => `${k === 'parentId' ? 'parent_id' : k === 'isActive' ? 'is_active' : k} = ?`)
-    .join(', ');
+  if (data.isActive !== undefined) {
+    fields.push('is_active = ?');
+    values.push(data.isActive);
+  }
 
-  const values = keys.map(k => filtered[k]);
+  if (!fields.length) {
+    throw new Error('No fields to update');
+  }
 
   await query(
     `UPDATE product_categories
-     SET ${setClause}
+     SET ${fields.join(', ')}
      WHERE id = ? AND tenant_id = ?`,
     [...values, id, tenantId]
   );
@@ -85,13 +90,14 @@ const update = async (id, tenantId, data) => {
   return findById(id, tenantId);
 };
 
-const softDelete = async (id, tenantId) => {
-  await query(
-    `UPDATE product_categories
-     SET is_active = 0
+const hardDelete = async (id, tenantId) => {
+  const result = await query(
+    `DELETE FROM product_categories
      WHERE id = ? AND tenant_id = ?`,
     [id, tenantId]
   );
+
+  return result.affectedRows;
 };
 
 module.exports = {
@@ -100,5 +106,5 @@ module.exports = {
   findByName,
   create,
   update,
-  softDelete,
+  hardDelete,
 };

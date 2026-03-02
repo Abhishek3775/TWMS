@@ -9,6 +9,9 @@ const env = require('./config/env');
 const logger = require('./utils/logger');
 const { apiLimiter } = require('./middlewares/rateLimiter.middleware');
 const { errorHandler, notFoundHandler } = require('./middlewares/error.middleware');
+const path = require('path');
+
+
 
 // ─── Route Imports ────────────────────────────────────────────────────────────
 const authRoutes = require('./modules/auth/routes');
@@ -19,6 +22,7 @@ const invoiceRoutes = require('./modules/invoices/routes');
 const reportRoutes = require('./modules/reports/routes');
 const stockLedgerRoutes = require('./modules/stock-ledger/routes');
 const stockSummaryRoutes = require('./modules/stock-summary/routes');
+const categoryRoutes = require('./modules/categories/routes');
 
 // Inline route handlers for CRUD modules (same pattern as products)
 const buildCrudRouter = (tableName, allowedSortFields = ['created_at']) => {
@@ -104,6 +108,8 @@ const buildCrudRouter = (tableName, allowedSortFields = ['created_at']) => {
 const app = express();
 const API = `/api/${env.API_VERSION}`;
 
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // ─── Global Middleware ─────────────────────────────────────────────────────────
 app.set('trust proxy', 1);
 app.use(helmet());
@@ -155,7 +161,8 @@ app.use(`${API}/customers`, buildCrudRouter('customers', ['name', 'created_at'])
 app.use(`${API}/warehouses`, buildCrudRouter('warehouses', ['name', 'created_at']));
 app.use(`${API}/racks`, buildCrudRouter('racks', ['name', 'created_at']));
 app.use(`${API}/purchase-orders`, buildCrudRouter('purchase_orders', ['order_date', 'created_at']));
-app.use(`${API}/categories`, buildCrudRouter('product_categories', ['name']));
+// app.use(`${API}/categories`, buildCrudRouter('product_categories', ['name']));
+app.use(`${API}/categories`, categoryRoutes);
 app.use(`${API}/shades`, buildCrudRouter('shades', ['shade_code', 'created_at']));
 app.use(`${API}/batches`, buildCrudRouter('batches', ['batch_number', 'created_at']));
 app.use(`${API}/pick-lists`, buildCrudRouter('pick_lists', ['created_at']));

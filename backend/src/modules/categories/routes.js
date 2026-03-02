@@ -12,7 +12,7 @@ router.get('/', ctrl.getAll);
 router.get('/:id', ctrl.getById);
 
 router.post('/', requireMinRole('admin'), ctrl.create);
-router.patch('/:id', requireMinRole('admin'), ctrl.update);
+router.put('/:id', requireMinRole('admin'), ctrl.update);
 router.delete('/:id', requireMinRole('admin'), ctrl.remove);
 
 module.exports = router;

@@ -28,8 +28,12 @@ const update = async (req, res) => {
 };
 
 const remove = async (req, res) => {
-  await service.remove(req.params.id, req.tenantId);
-  return success(res, {}, 'Category deactivated');
+  const deletedCategory = await service.remove(
+    req.params.id,
+    req.tenantId
+  );
+
+  return success(res, deletedCategory, 'Category deleted successfully');
 };
 
 module.exports = {

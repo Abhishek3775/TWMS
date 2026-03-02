@@ -30,7 +30,7 @@ module.exports = {
     secret: process.env.NODE_ENV === 'production'
       ? required('JWT_SECRET')
       : (process.env.JWT_SECRET || 'dev_secret_change_in_prod_minimum_32_chars'),
-    expiresIn: process.env.JWT_EXPIRES_IN || '15m',
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     refreshSecret: process.env.NODE_ENV === 'production'
       ? required('JWT_REFRESH_SECRET')
       : (process.env.JWT_REFRESH_SECRET || 'dev_refresh_secret_change_in_prod_min_32'),
