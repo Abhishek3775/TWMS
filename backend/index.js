@@ -1,40 +1,32 @@
-require("dotenv").config();
-const express = require("express");
-const mysql = require("mysql2");
-const cors = require("cors");
+'use strict';
+const app = require('./src/app');
+const env = require('./src/config/env');
+const { testConnection } = require('./src/config/db');
+const logger = require('./src/utils/logger');
 
-const app = express();
+const start = async () => {
+  await testConnection();
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+  const server = app.listen(env.PORT, () => {
+    logger.info(`Tiles WMS API running on port ${env.PORT} [${env.NODE_ENV}]`);
+    logger.info(`API Base: http://localhost:${env.PORT}/api/${env.API_VERSION}`);
+    logger.info(`Health:  http://localhost:${env.PORT}/health`);
+  });
 
-// MySQL Connection
-// const db = mysql.createConnection({
-//   host: process.env.DB_HOST || "localhost",
-//   user: process.env.DB_USER || "root",
-//   password: process.env.DB_PASSWORD || "",
-//   database: process.env.DB_NAME || "tiles_warehouse",
-//   port: process.env.DB_PORT || 3308, // change if needed
-// });
+  // Graceful shutdown
+  const shutdown = async (signal) => {
+    logger.info(`${signal} received — shutting down gracefully`);
+    server.close(() => {
+      logger.info('HTTP server closed');
+      process.exit(0);
+    });
+    setTimeout(() => { logger.error('Forced shutdown'); process.exit(1); }, 10000);
+  };
 
-// Connect to DB
-// db.connect((err) => {
-//   if (err) {
-//     console.error("Database connection failed:", err);
-//   } else {
-//     console.log("MySQL Connected ✅");
-//   }
-// });
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT',  () => shutdown('SIGINT'));
+  process.on('uncaughtException',  (err) => { logger.error('Uncaught Exception', { error: err.message }); process.exit(1); });
+  process.on('unhandledRejection', (err) => { logger.error('Unhandled Rejection', { error: err?.message }); process.exit(1); });
+};
 
-// Test Route
-app.get("/", (req, res) => {
-  res.send("Backend is running 🚀");
-});
-
-// Start Server
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+start();

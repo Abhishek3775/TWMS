@@ -128,7 +128,7 @@ export default function DashboardPage() {
                   (recentSO ?? []).map(so => (
                     <tr key={so.id} className="border-t border-border hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-2.5 font-mono-code text-xs font-medium text-foreground">{so.so_number}</td>
-                      <td className="px-4 py-2.5 text-foreground">{(so.customers as any)?.name ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-foreground">{so.customer_name ?? '—'}</td>
                       <td className="px-4 py-2.5"><StatusBadge status={so.status} /></td>
                       <td className="px-4 py-2.5 text-right font-medium text-foreground">₹{Number(so.grand_total).toLocaleString()}</td>
                     </tr>

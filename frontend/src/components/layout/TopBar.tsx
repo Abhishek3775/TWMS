@@ -1,6 +1,7 @@
 import { Menu, Bell, Search, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/hooks/useAuth';
 
 interface TopBarProps {
   onToggleSidebar: () => void;
@@ -8,6 +9,8 @@ interface TopBarProps {
 }
 
 export function TopBar({ onToggleSidebar, title }: TopBarProps) {
+  const { user } = useAuth();
+
   return (
     <header className="h-14 bg-card border-b border-border flex items-center justify-between px-4 shrink-0">
       <div className="flex items-center gap-3">
@@ -36,8 +39,8 @@ export function TopBar({ onToggleSidebar, title }: TopBarProps) {
             <User className="h-4 w-4 text-primary-foreground" />
           </div>
           <div className="hidden sm:block">
-            <p className="text-xs font-medium text-foreground">Admin User</p>
-            <p className="text-[10px] text-muted-foreground">admin@tilepro.com</p>
+            <p className="text-xs font-medium text-foreground">{user?.name ?? 'User'}</p>
+            <p className="text-[10px] text-muted-foreground">{user?.email ?? ''}</p>
           </div>
         </div>
       </div>

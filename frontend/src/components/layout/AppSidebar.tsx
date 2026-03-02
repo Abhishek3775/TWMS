@@ -8,6 +8,7 @@ import {
   Bell, ScrollText, Factory
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 interface NavItem {
   label: string;
@@ -87,6 +88,7 @@ interface AppSidebarProps {
 
 export function AppSidebar({ collapsed }: AppSidebarProps) {
   const location = useLocation();
+  const { user } = useAuth();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     navItems.forEach(item => {
@@ -191,8 +193,8 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
         <div className="p-3 border-t border-sidebar-border">
           <div className="bg-sidebar-accent rounded-lg p-3">
             <p className="text-[10px] text-sidebar-foreground/60 font-medium">TENANT</p>
-            <p className="text-xs text-sidebar-foreground font-semibold truncate">TilePro Ceramics</p>
-            <p className="text-[10px] text-sidebar-foreground/50">Pro Plan</p>
+            <p className="text-xs text-sidebar-foreground font-semibold truncate">{user?.tenantSlug ?? 'Workspace'}</p>
+            <p className="text-[10px] text-sidebar-foreground/50">{user?.role ?? 'User'}</p>
           </div>
         </div>
       )}

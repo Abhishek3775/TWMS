@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { productApi } from '@/api/productApi';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { DataTableShell } from '@/components/shared/DataTableShell';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -14,6 +14,8 @@ const fields: FieldDef[] = [
   { key: 'name', label: 'Product Name', type: 'text', required: true, placeholder: 'Vitrified Floor Tile 600x600' },
   { key: 'code', label: 'Product Code', type: 'text', required: true, placeholder: 'VTF-001' },
   { key: 'size_label', label: 'Size Label', type: 'text', required: true, placeholder: '600x600mm' },
+  { key: 'size_length_mm', label: 'Length (mm)', type: 'number', required: true, defaultValue: 600 },
+  { key: 'size_width_mm', label: 'Width (mm)', type: 'number', required: true, defaultValue: 600 },
   { key: 'pieces_per_box', label: 'Pieces/Box', type: 'number', required: true, defaultValue: 4 },
   { key: 'sqft_per_box', label: 'Sqft/Box', type: 'number', required: true, defaultValue: 15.5 },
   { key: 'hsn_code', label: 'HSN Code', type: 'text', placeholder: '69072100' },
@@ -30,40 +32,49 @@ export default function ProductsPage() {
   const [editing, setEditing] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
 
-  const { data: products = [], isLoading } = useQuery({
+  const { data: paged, isLoading } = useQuery({
     queryKey: ['products'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => productApi.getAll({ page: 1, limit: 100 }),
   });
+  const products = (paged as any)?.data ?? [];
 
   const saveMutation = useMutation({
     mutationFn: async (formData: Record<string, any>) => {
       const payload = {
-        name: formData.name, code: formData.code, size_label: formData.size_label,
-        pieces_per_box: Number(formData.pieces_per_box), sqft_per_box: Number(formData.sqft_per_box),
-        gst_rate: Number(formData.gst_rate), mrp: formData.mrp ? Number(formData.mrp) : null,
-        reorder_level_boxes: Number(formData.reorder_level_boxes || 0),
-        hsn_code: formData.hsn_code || null, description: formData.description || null,
-        is_active: formData.is_active,
+        name: formData.name,
+        code: formData.code,
+        sizeLabel: formData.size_label,
+        sizeLengthMm: Number(formData.size_length_mm),   // required by backend
+        sizeWidthMm: Number(formData.size_width_mm),     // required by backend
+        piecesPerBox: Number(formData.pieces_per_box),
+        sqftPerBox: Number(formData.sqft_per_box),
+        gstRate: Number(formData.gst_rate),
+        mrp: formData.mrp ? Number(formData.mrp) : null,
+        reorderLevelBoxes: Number(formData.reorder_level_boxes || 0),
+        hsnCode: formData.hsn_code || null,
+        description: formData.description || null,
+        isActive: formData.is_active,
       };
-      if (editing) {
-        const { error } = await supabase.from('products').update(payload).eq('id', editing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('products').insert([payload]);
-        if (error) throw error;
-      }
+      return editing
+        ? productApi.update(editing.id, payload as any)
+        : productApi.create(payload as any);
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); setDialogOpen(false); setEditing(null); toast.success(editing ? 'Product updated' : 'Product created'); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      setDialogOpen(false);
+      setEditing(null);
+      toast.success(editing ? 'Product updated' : 'Product created');
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from('products').delete().eq('id', id); if (error) throw error; },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); setDeleting(null); toast.success('Product deleted'); },
+    mutationFn: (id: string) => productApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      setDeleting(null);
+      toast.success('Product deleted');
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
