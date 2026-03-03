@@ -1,40 +1,36 @@
-// ─── Customer Types ───────────────────────────────────────────────────────────
+// ─── Customer Types (aligned with DB: customers table) ─────────────────────────
 
 export interface Customer {
   id: string;
   tenant_id: string;
   name: string;
-  code: string;
-  contact_person?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  address?: string | null;
-  city?: string | null;
-  state?: string | null;
-  pincode?: string | null;
-  gstin?: string | null;
-  pan?: string | null;
-  credit_limit?: number | null;
-  payment_terms_days?: number | null;
+  code: string | null;
+  contact_person: string | null;
+  phone: string | null;
+  email: string | null;
+  billing_address: string | null;
+  shipping_address: string | null;
+  gstin: string | null;
+  state_code: string | null;
+  credit_limit: number | null;
+  payment_terms_days: number | null;
   is_active: boolean;
   created_at: string;
-  updated_at: string;
 }
 
 export interface CreateCustomerDto {
   name: string;
-  code: string;
-  contact_person?: string;
-  phone?: string;
-  email?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  pincode?: string;
-  gstin?: string;
-  pan?: string;
-  credit_limit?: number;
-  payment_terms_days?: number;
+  code?: string | null;
+  contact_person?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  billing_address?: string | null;
+  shipping_address?: string | null;
+  gstin?: string | null;
+  state_code?: string | null;
+  credit_limit?: number | null;
+  payment_terms_days?: number | null;
+  is_active?: boolean;
 }
 
 export interface UpdateCustomerDto extends Partial<CreateCustomerDto> {

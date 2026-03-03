@@ -162,7 +162,7 @@ const getStockValuation = async (tenantId, warehouseId) => {
 };
 
 /**
- * Dashboard KPIs — all in one parallel query
+ * Dashboard KPIs — legacy shape (kept for backward compatibility)
  */
 const getDashboardKPIs = async (tenantId) => {
   const today = new Date();
@@ -207,4 +207,167 @@ const getDashboardKPIs = async (tenantId) => {
   };
 };
 
-module.exports = { getGSTReport, getRevenueReport, getAgingReport, getStockValuation, getDashboardKPIs };
+/**
+ * Full dashboard payload in one optimized flow — single endpoint for UI.
+ * Uses parallel aggregated queries; no N+1. All tenant-scoped.
+ */
+const getDashboard = async (tenantId) => {
+  const [
+    summaryRows,
+    lowStockRows,
+    recentSalesRows,
+    recentPurchasesRows,
+    stockByCategoryRows,
+    recentGRNsRows,
+    recentTransfersRows,
+    ledgerSummaryRows,
+  ] = await Promise.all([
+    // Summary: counts and amounts in one round-trip per metric
+    Promise.all([
+      query(`SELECT COUNT(*) AS total FROM warehouses WHERE tenant_id = ? AND is_active = 1`, [tenantId]),
+      query(`SELECT COUNT(*) AS total FROM products WHERE tenant_id = ? AND is_active = 1`, [tenantId]),
+      query(`SELECT COUNT(*) AS total FROM vendors WHERE tenant_id = ? AND is_active = 1`, [tenantId]),
+      query(`SELECT COUNT(*) AS total FROM customers WHERE tenant_id = ? AND is_active = 1`, [tenantId]),
+      query(`SELECT COUNT(*) AS total FROM purchase_orders WHERE tenant_id = ? AND status IN ('draft','confirmed')`, [tenantId]),
+      query(
+        `SELECT COALESCE(SUM(ss.total_boxes), 0) AS total_boxes, COALESCE(SUM(ss.total_sqft), 0) AS total_sqft
+         FROM stock_summary ss WHERE ss.tenant_id = ?`,
+        [tenantId]
+      ),
+      query(
+        `SELECT COALESCE(SUM(i.grand_total), 0) AS total
+         FROM invoices i
+         WHERE i.tenant_id = ? AND i.status = 'issued'
+           AND YEAR(i.invoice_date) = YEAR(CURDATE()) AND MONTH(i.invoice_date) = MONTH(CURDATE())`,
+        [tenantId]
+      ),
+      query(
+        `SELECT COALESCE(SUM(po.grand_total), 0) AS total
+         FROM purchase_orders po
+         WHERE po.tenant_id = ? AND po.status IN ('confirmed','partial','received')
+           AND YEAR(po.order_date) = YEAR(CURDATE()) AND MONTH(po.order_date) = MONTH(CURDATE())`,
+        [tenantId]
+      ),
+    ]),
+    // Low stock: from low_stock_alerts if any, else computed from stock_summary vs reorder_level
+    (async () => {
+      const fromAlerts = await query(
+        `SELECT la.id, la.warehouse_id, la.product_id, la.shade_id, la.current_stock_boxes,
+                la.reorder_level_boxes, la.status, la.alerted_at,
+                p.code AS product_code, p.name AS product_name, p.reorder_level_boxes AS product_reorder
+         FROM low_stock_alerts la
+         JOIN products p ON p.id = la.product_id AND p.tenant_id = la.tenant_id
+         WHERE la.tenant_id = ? AND la.status = 'open'
+         ORDER BY la.alerted_at DESC LIMIT 10`,
+        [tenantId]
+      );
+      if (fromAlerts.length > 0) return fromAlerts;
+      return query(
+        `SELECT ss.id, ss.warehouse_id, ss.product_id, ss.shade_id, ss.total_boxes AS current_stock_boxes,
+                p.reorder_level_boxes AS reorder_level_boxes, 'open' AS status, NOW() AS alerted_at,
+                p.code AS product_code, p.name AS product_name, p.reorder_level_boxes AS product_reorder
+         FROM stock_summary ss
+         JOIN products p ON p.id = ss.product_id AND p.tenant_id = ss.tenant_id
+         WHERE ss.tenant_id = ? AND ss.total_boxes <= p.reorder_level_boxes AND ss.total_boxes >= 0
+         ORDER BY ss.total_boxes ASC LIMIT 10`,
+        [tenantId]
+      );
+    })(),
+    // Recent sales: last 5 with customer name
+    query(
+      `SELECT so.id, so.so_number, so.order_date, so.status, so.grand_total, c.name AS customer_name
+       FROM sales_orders so
+       JOIN customers c ON c.id = so.customer_id AND c.tenant_id = so.tenant_id
+       WHERE so.tenant_id = ?
+       ORDER BY so.order_date DESC, so.created_at DESC LIMIT 5`,
+      [tenantId]
+    ),
+    // Recent purchases: last 5 with vendor name
+    query(
+      `SELECT po.id, po.po_number, po.order_date, po.status, po.grand_total, v.name AS vendor_name
+       FROM purchase_orders po
+       JOIN vendors v ON v.id = po.vendor_id AND v.tenant_id = po.tenant_id
+       WHERE po.tenant_id = ?
+       ORDER BY po.order_date DESC, po.created_at DESC LIMIT 5`,
+      [tenantId]
+    ),
+    // Stock by category for pie chart
+    query(
+      `SELECT COALESCE(pc.name, 'Uncategorized') AS category, SUM(ss.total_boxes) AS boxes
+       FROM stock_summary ss
+       JOIN products p ON p.id = ss.product_id AND p.tenant_id = ss.tenant_id
+       LEFT JOIN product_categories pc ON pc.id = p.category_id AND pc.tenant_id = p.tenant_id
+       WHERE ss.tenant_id = ? AND ss.total_boxes > 0
+       GROUP BY pc.id, COALESCE(pc.name, 'Uncategorized')
+       ORDER BY boxes DESC`,
+      [tenantId]
+    ),
+    // Recent GRNs (last 5 with vendor name)
+    query(
+      `SELECT g.id, g.grn_number, g.receipt_date, g.status, g.created_at, v.name AS vendor_name, w.name AS warehouse_name
+       FROM grn g
+       JOIN vendors v ON v.id = g.vendor_id AND v.tenant_id = g.tenant_id
+       JOIN warehouses w ON w.id = g.warehouse_id AND w.tenant_id = g.tenant_id
+       WHERE g.tenant_id = ?
+       ORDER BY g.receipt_date DESC, g.created_at DESC LIMIT 5`,
+      [tenantId]
+    ),
+    // Recent stock transfers (last 5 with from/to warehouse names)
+    query(
+      `SELECT st.id, st.transfer_number, st.transfer_date, st.status, st.created_at,
+              fw.name AS from_warehouse_name, tw.name AS to_warehouse_name
+       FROM stock_transfers st
+       JOIN warehouses fw ON fw.id = st.from_warehouse_id AND fw.tenant_id = st.tenant_id
+       JOIN warehouses tw ON tw.id = st.to_warehouse_id AND tw.tenant_id = st.tenant_id
+       WHERE st.tenant_id = ?
+       ORDER BY st.transfer_date DESC, st.created_at DESC LIMIT 5`,
+      [tenantId]
+    ),
+    // Ledger summary: entry count (last 30 days) for activity indicator
+    query(
+      `SELECT COUNT(*) AS entry_count
+       FROM stock_ledger
+       WHERE tenant_id = ? AND transaction_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)`,
+      [tenantId]
+    ),
+  ]);
+
+  const [warehousesCount, productsCount, vendorsCount, customersCount, pendingPOCount, stockRow, monthlySalesRow, monthlyPurchasesRow] = summaryRows;
+
+  const ledgerSummary = ledgerSummaryRows[0];
+  const summary = {
+    totalWarehouses: Number(warehousesCount[0]?.total ?? 0),
+    totalProducts: Number(productsCount[0]?.total ?? 0),
+    totalVendors: Number(vendorsCount[0]?.total ?? 0),
+    totalCustomers: Number(customersCount[0]?.total ?? 0),
+    pendingPurchaseOrders: Number(pendingPOCount[0]?.total ?? 0),
+    totalStock: Number(stockRow[0]?.total_boxes ?? 0),
+    totalStockSqft: Number(stockRow[0]?.total_sqft ?? 0),
+    monthlySales: Number(monthlySalesRow[0]?.total ?? 0),
+    monthlyPurchases: Number(monthlyPurchasesRow[0]?.total ?? 0),
+    ledgerEntriesLast30Days: Number(ledgerSummary?.entry_count ?? 0),
+  };
+
+  // Legacy KPI fields for existing consumers
+  const kpis = await getDashboardKPIs(tenantId);
+
+  return {
+    summary,
+    kpis: {
+      todaySales: kpis.todaySales,
+      pendingOrders: kpis.pendingOrders,
+      lowStockItems: kpis.lowStockItems,
+      activePOs: kpis.grnPending,
+      monthRevenue: kpis.monthRevenue,
+      unpaidInvoices: kpis.unpaidInvoices,
+    },
+    lowStock: lowStockRows,
+    recentSales: recentSalesRows,
+    recentPurchases: recentPurchasesRows,
+    recentGRNs: recentGRNsRows,
+    recentTransfers: recentTransfersRows,
+    stockByCategory: stockByCategoryRows,
+  };
+};
+
+module.exports = { getGSTReport, getRevenueReport, getAgingReport, getStockValuation, getDashboardKPIs, getDashboard };

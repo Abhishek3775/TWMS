@@ -8,17 +8,18 @@ export interface Warehouse {
   address?: string | null;
   city?: string | null;
   state?: string | null;
+  pincode?: string | null;
   is_active: boolean;
   created_at: string;
-  updated_at: string;
 }
 
 export interface CreateWarehouseDto {
   name: string;
   code: string;
-  address?: string;
-  city?: string;
-  state?: string;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
 }
 
 export interface UpdateWarehouseDto extends Partial<CreateWarehouseDto> {
@@ -32,20 +33,28 @@ export interface Rack {
   tenant_id: string;
   warehouse_id: string;
   name: string;
-  code?: string | null;
+  aisle?: string | null;
+  row?: string | null;
+  level?: string | null;
+  capacity_boxes?: number | null;
+  qr_code?: string | null;
   is_active: boolean;
   created_at: string;
-  updated_at: string;
 }
 
 export interface CreateRackDto {
   warehouse_id: string;
   name: string;
-  code?: string;
+  aisle?: string | null;
+  row?: string | null;
+  level?: string | null;
+  capacity_boxes?: number | null;
+  qr_code?: string | null;
 }
 
 export interface UpdateRackDto extends Partial<CreateRackDto> {
   is_active?: boolean;
+  warehouse_id?: string;
 }
 
 // ─── Category Types ───────────────────────────────────────────────────────────

@@ -21,25 +21,30 @@ export default function CategoriesPage() {
   const [editing, setEditing] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
 
-  // ===============================
-  // FETCH + NORMALIZE
-  // ===============================
-  const { data: categories = [], isLoading } = useQuery({
+  /* ===============================
+     FETCH SAFE
+  =============================== */
+
+  const { data, isLoading } = useQuery({
     queryKey: ["categories"],
-    queryFn: async () => {
-      const res = await getCategories();
-      return res.map((c: any) => ({
-        id: c.id,
-        name: c.name,
-        parentId: c.parent_id,
-        isActive: !!c.is_active,
-      }));
-    },
+    queryFn: getCategories,
   });
 
-  // ===============================
-  // FORM FIELDS
-  // ===============================
+  const categories = useMemo(() => {
+    if (!Array.isArray(data)) return [];
+
+    return data.map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      parentId: c.parent_id ?? c.parentId ?? null,
+      isActive: !!(c.is_active ?? c.isActive),
+    }));
+  }, [data]);
+
+  /* ===============================
+     FORM FIELDS
+  =============================== */
+
   const fields: FieldDef[] = useMemo(() => [
     {
       key: "name",
@@ -55,8 +60,8 @@ export default function CategoriesPage() {
       options: [
         { value: "__none__", label: "None" },
         ...categories
-          .filter((c: any) => c.id !== editing?.id)
-          .map((c: any) => ({
+          .filter((c) => c.id !== editing?.id)
+          .map((c) => ({
             value: c.id,
             label: c.name,
           })),
@@ -70,11 +75,12 @@ export default function CategoriesPage() {
     },
   ], [categories, editing]);
 
-  // ===============================
-  // CREATE / UPDATE
-  // ===============================
+  /* ===============================
+     SAVE
+  =============================== */
+
   const saveMutation = useMutation({
-    mutationFn: async (formData: Record<string, any>) => {
+    mutationFn: async (formData: any) => {
       const payload = {
         name: formData.name,
         parentId:
@@ -84,11 +90,9 @@ export default function CategoriesPage() {
         isActive: formData.isActive ?? true,
       };
 
-      if (editing) {
-        return updateCategory(editing.id, payload);
-      } else {
-        return createCategory(payload);
-      }
+      return editing
+        ? updateCategory(editing.id, payload)
+        : createCategory(payload);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["categories"] });
@@ -96,16 +100,12 @@ export default function CategoriesPage() {
       setEditing(null);
       toast.success(editing ? "Category updated" : "Category created");
     },
-    onError: (e: any) => {
-      toast.error(
-        e?.response?.data?.error?.message || "Something went wrong"
-      );
-    },
   });
 
-  // ===============================
-  // DELETE
-  // ===============================
+  /* ===============================
+     DELETE
+  =============================== */
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteCategory(id),
     onSuccess: () => {
@@ -113,23 +113,19 @@ export default function CategoriesPage() {
       setDeleting(null);
       toast.success("Category deleted");
     },
-    onError: (e: any) => {
-      toast.error(
-        e?.response?.data?.error?.message || "Delete failed"
-      );
-    },
   });
 
-  // ===============================
-  // TABLE
-  // ===============================
+  /* ===============================
+     TABLE
+  =============================== */
+
   const columns = [
     { key: "name", label: "Category Name" },
     {
       key: "parentId",
       label: "Parent",
       render: (row: any) =>
-        categories.find((c: any) => c.id === row.parentId)?.name || "—",
+        categories.find((c) => c.id === row.parentId)?.name || "—",
     },
     {
       key: "isActive",
@@ -146,7 +142,6 @@ export default function CategoriesPage() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
             onClick={() => {
               setEditing(row);
               setDialogOpen(true);
@@ -154,11 +149,10 @@ export default function CategoriesPage() {
           >
             <Pencil className="h-4 w-4" />
           </Button>
-
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-destructive"
+            className="text-destructive"
             onClick={() => setDeleting(row)}
           >
             <Trash2 className="h-4 w-4" />
@@ -181,7 +175,7 @@ export default function CategoriesPage() {
       />
 
       {isLoading ? (
-        <p className="text-muted-foreground">Loading...</p>
+        <p>Loading...</p>
       ) : (
         <DataTableShell
           data={categories}
@@ -207,9 +201,7 @@ export default function CategoriesPage() {
       <DeleteConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
-        onConfirm={() =>
-          deleteMutation.mutateAsync(deleting?.id)
-        }
+        onConfirm={() => deleteMutation.mutateAsync(deleting?.id)}
         loading={deleteMutation.isPending}
       />
     </div>

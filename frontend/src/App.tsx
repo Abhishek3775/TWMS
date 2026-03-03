@@ -12,6 +12,7 @@ import CategoriesPage from "@/pages/CategoriesPage";
 import VendorsPage from "@/pages/VendorsPage";
 import CustomersPage from "@/pages/CustomersPage";
 import WarehousesPage from "@/pages/WarehousesPage";
+import RacksPage from "@/pages/RacksPage";
 import PurchaseOrdersPage from "@/pages/PurchaseOrdersPage";
 import GRNPage from "@/pages/GRNPage";
 import SalesOrdersPage from "@/pages/SalesOrdersPage";
@@ -30,6 +31,7 @@ import PaymentsMadePage from "@/pages/PaymentsMadePage";
 import CreditNotesPage from "@/pages/CreditNotesPage";
 import DebitNotesPage from "@/pages/DebitNotesPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
+import StockLedgerPage from "@/pages/StockLedgerPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,7 +53,7 @@ function AppRoutes() {
         <Route path="/purchase/grn" element={<GRNPage />} />
         <Route path="/purchase/returns" element={<PurchaseReturnsPage />} />
         <Route path="/inventory/stock" element={<StockPage />} />
-        <Route path="/inventory/ledger" element={<PlaceholderPage title="Stock Ledger" />} />
+        <Route path="/inventory/ledger" element={<StockLedgerPage />} />
         <Route path="/inventory/transfers" element={<StockTransfersPage />} />
         <Route path="/inventory/adjustments" element={<StockAdjustmentsPage />} />
         <Route path="/inventory/damage" element={<DamageEntriesPage />} />
@@ -72,7 +74,7 @@ function AppRoutes() {
         <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
         <Route path="/setup/company" element={<PlaceholderPage title="GST Configuration" />} />
         <Route path="/setup/warehouses" element={<WarehousesPage />} />
-        <Route path="/setup/racks" element={<PlaceholderPage title="Racks" />} />
+        <Route path="/setup/racks" element={<RacksPage />} />
         <Route path="/setup/users" element={<PlaceholderPage title="Users" />} />
       </Route>
       <Route path="*" element={<NotFound />} />

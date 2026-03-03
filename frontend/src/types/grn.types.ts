@@ -34,7 +34,9 @@ export interface GRN {
   warehouse_id: string;
   warehouse_name?: string;       // joined
   status: GRNStatus;
-  received_date: string;
+  /** API may return receipt_date (DB column) or received_date */
+  received_date?: string;
+  receipt_date?: string;
   invoice_number?: string | null;
   invoice_date?: string | null;
   notes?: string | null;

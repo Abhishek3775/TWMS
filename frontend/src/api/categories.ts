@@ -2,6 +2,7 @@ import api from "@/lib/api";
 
 export const getCategories = async () => {
   const res = await api.get("/categories");
+  // console.log("getting all the categories", res.data.data)
   return res.data.data;
 };
 

@@ -1,95 +1,175 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { grnApi } from '@/api/grnApi';
+import { vendorApi } from '@/api/vendorApi';
+import { warehouseApi } from '@/api/warehouseApi';
+import type { GRN } from '@/types/grn.types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { DataTableShell } from '@/components/shared/DataTableShell';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { CrudFormDialog, FieldDef, AutoNumberConfig } from '@/components/shared/CrudFormDialog';
-import { DeleteConfirmDialog } from '@/components/shared/DeleteConfirmDialog';
+import { CrudFormDialog, FieldDef } from '@/components/shared/CrudFormDialog';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function GRNPage() {
-  const { user } = useAuth();
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
-  const [deleting, setDeleting] = useState<any>(null);
+  const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
 
-  const { data: vendors = [] } = useQuery({
-    queryKey: ['vendors-active'],
-    queryFn: async () => { const { data, error } = await supabase.from('vendors').select('id, name').eq('is_active', true).order('name'); if (error) throw error; return data; },
+  const applySearch = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
+  const listParams = {
+    page,
+    limit: 25,
+    search: search.trim() || undefined,
+    sortBy: 'created_at',
+    sortOrder: 'DESC' as const,
+  };
+
+  const { data: vendorsData } = useQuery({
+    queryKey: ['vendors', { limit: 500 }],
+    queryFn: () => vendorApi.getAll({ limit: 500 }),
+  });
+  const vendors = vendorsData?.data ?? [];
+
+  const { data: warehousesData } = useQuery({
+    queryKey: ['warehouses', { limit: 500 }],
+    queryFn: () => warehouseApi.getAll({ limit: 500 }),
+  });
+  const warehouses = warehousesData?.data ?? [];
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['grns', listParams],
+    queryFn: () => grnApi.getAll(listParams),
   });
 
-  const { data: warehouses = [] } = useQuery({
-    queryKey: ['warehouses-active'],
-    queryFn: async () => { const { data, error } = await supabase.from('warehouses').select('id, name').eq('is_active', true).order('name'); if (error) throw error; return data; },
-  });
+  const grns: GRN[] = data?.data ?? [];
+  const meta = data?.meta ?? null;
 
-  const { data: grns = [], isLoading } = useQuery({
-    queryKey: ['grns'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('grn').select('*, vendors(name), warehouses(name)').order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchInput(value);
+      applySearch(value);
     },
-  });
+    [applySearch]
+  );
+
+  const vendorOptions = vendors.map((v) => ({ value: v.id, label: v.name }));
+  const warehouseOptions = warehouses.map((w) => ({ value: w.id, label: w.name }));
 
   const fields: FieldDef[] = [
-    { key: 'grn_number', label: 'GRN Number', type: 'text', required: true, placeholder: 'GRN-2024-0001' },
-    { key: 'vendor_id', label: 'Vendor', type: 'select', required: true, options: vendors.map(v => ({ value: v.id, label: v.name })) },
-    { key: 'warehouse_id', label: 'Warehouse', type: 'select', required: true, options: warehouses.map(w => ({ value: w.id, label: w.name })) },
-    { key: 'status', label: 'Status', type: 'select', options: [{ value: 'draft', label: 'Draft' }, { value: 'verified', label: 'Verified' }, { value: 'posted', label: 'Posted' }], defaultValue: 'draft' },
-    { key: 'receipt_date', label: 'Receipt Date', type: 'date' },
+    { key: 'vendor_id', label: 'Vendor', type: 'select', required: true, options: vendorOptions },
+    { key: 'warehouse_id', label: 'Warehouse', type: 'select', required: true, options: warehouseOptions },
+    { key: 'receipt_date', label: 'Receipt Date', type: 'date', required: true },
     { key: 'invoice_number', label: 'Invoice Number', type: 'text' },
-    { key: 'vehicle_number', label: 'Vehicle Number', type: 'text' },
     { key: 'notes', label: 'Notes', type: 'textarea' },
   ];
 
-  const saveMutation = useMutation({
-    mutationFn: async (fd: Record<string, any>) => {
+  const createMutation = useMutation({
+    mutationFn: async (fd: Record<string, unknown>) => {
+      // Backend expects camelCase and receiptDate
       const payload = {
-        grn_number: fd.grn_number, vendor_id: fd.vendor_id, warehouse_id: fd.warehouse_id,
-        status: fd.status as any, receipt_date: fd.receipt_date || null,
-        invoice_number: fd.invoice_number || null, vehicle_number: fd.vehicle_number || null,
-        notes: fd.notes || null, created_by: user?.id || null,
+        vendorId: String(fd.vendor_id),
+        warehouseId: String(fd.warehouse_id),
+        receiptDate: fd.receipt_date ? String(fd.receipt_date) : new Date().toISOString().slice(0, 10),
+        invoiceNumber: fd.invoice_number ? String(fd.invoice_number) : undefined,
+        notes: fd.notes ? String(fd.notes) : undefined,
+        items: [] as Array<{
+          product_id: string;
+          ordered_qty_boxes: number;
+          received_qty_boxes: number;
+          unit_cost: number;
+          gst_rate: number;
+        }>,
       };
-      if (editing) { const { error } = await supabase.from('grn').update(payload).eq('id', editing.id); if (error) throw error; }
-      else { const { error } = await supabase.from('grn').insert([payload]); if (error) throw error; }
+      const res = await grnApi.create(payload as { vendorId: string; warehouseId: string; receiptDate: string; invoiceNumber?: string; notes?: string; items: Array<{ product_id: string; ordered_qty_boxes: number; received_qty_boxes: number; unit_cost: number; gst_rate: number }> });
+      return res;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['grns'] }); setDialogOpen(false); setEditing(null); toast.success(editing ? 'Updated' : 'Created'); },
-    onError: (e: any) => toast.error(e.message),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from('grn').delete().eq('id', id); if (error) throw error; },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['grns'] }); setDeleting(null); toast.success('Deleted'); },
-    onError: (e: any) => toast.error(e.message),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['grns'] });
+      setDialogOpen(false);
+      toast.success('GRN created');
+    },
+    onError: (e: { response?: { data?: { error?: { message?: string }; message?: string } } }) => {
+      const msg =
+        e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Create failed';
+      toast.error(msg);
+    },
   });
 
   const columns = [
-    { key: 'grn_number', label: 'GRN #', render: (r: any) => <span className="font-mono-code text-sm font-medium">{r.grn_number}</span> },
-    { key: 'vendor', label: 'Vendor', render: (r: any) => (r as any).vendors?.name || '—' },
-    { key: 'warehouse', label: 'Warehouse', render: (r: any) => (r as any).warehouses?.name || '—' },
-    { key: 'status', label: 'Status', render: (r: any) => <StatusBadge status={r.status} /> },
-    { key: 'receipt_date', label: 'Date', render: (r: any) => r.receipt_date ? new Date(r.receipt_date).toLocaleDateString() : '—' },
-    { key: 'invoice_number', label: 'Invoice #', render: (r: any) => r.invoice_number || '—' },
-    { key: 'actions', label: 'Actions', render: (r: any) => (
-      <div className="flex gap-1">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(r); setDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleting(r)}><Trash2 className="h-4 w-4" /></Button>
-      </div>
-    )},
+    {
+      key: 'grn_number',
+      label: 'GRN #',
+      render: (r: GRN) => <span className="font-mono text-sm font-medium">{r.grn_number}</span>,
+    },
+    { key: 'vendor_name', label: 'Vendor', render: (r: GRN) => r.vendor_name ?? '—' },
+    { key: 'warehouse_name', label: 'Warehouse', render: (r: GRN) => r.warehouse_name ?? '—' },
+    { key: 'status', label: 'Status', render: (r: GRN) => <StatusBadge status={r.status} /> },
+    {
+      key: 'receipt_date',
+      label: 'Date',
+      render: (r: GRN) => {
+        const dateStr = r.receipt_date ?? r.received_date;
+        return dateStr ? new Date(dateStr).toLocaleDateString('en-IN') : '—';
+      },
+    },
+    { key: 'invoice_number', label: 'Invoice #', render: (r: GRN) => r.invoice_number ?? '—' },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (r: GRN) => (
+        <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => window.open(`/inventory/grn/${r.id}`, '_self')}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   return (
     <div>
-      <PageHeader title="Goods Receipt Notes" subtitle="Manage goods receipt" onAdd={() => { setEditing(null); setDialogOpen(true); }} addLabel="New GRN" />
-      {isLoading ? <p className="text-muted-foreground">Loading...</p> : <DataTableShell data={grns} columns={columns} searchKey="grn_number" searchPlaceholder="Search GRN#..." />}
-      <CrudFormDialog open={dialogOpen} onClose={() => { setDialogOpen(false); setEditing(null); }} onSubmit={d => saveMutation.mutateAsync(d)} fields={fields} title={editing ? 'Edit GRN' : 'New GRN'} initialData={editing} loading={saveMutation.isPending} autoNumber={{ fieldKey: 'grn_number', docType: 'grn' }} />
-      <DeleteConfirmDialog open={!!deleting} onClose={() => setDeleting(null)} onConfirm={() => deleteMutation.mutateAsync(deleting?.id)} loading={deleteMutation.isPending} />
+      <PageHeader
+        title="Goods Receipt Notes"
+        subtitle="Manage goods receipt"
+        onAdd={() => setDialogOpen(true)}
+        addLabel="New GRN"
+      />
+
+      <DataTableShell<GRN>
+        data={grns}
+        columns={columns}
+        searchKey="grn_number"
+        searchPlaceholder="Search by GRN # or vendor..."
+        serverSide
+        searchValue={searchInput}
+        onSearchChange={handleSearchChange}
+        paginationMeta={meta}
+        onPageChange={setPage}
+        isLoading={isLoading}
+      />
+
+      <CrudFormDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onSubmit={(d) => createMutation.mutateAsync(d)}
+        fields={fields}
+        title="New GRN"
+        initialData={null}
+        loading={createMutation.isPending}
+      />
     </div>
   );
 }

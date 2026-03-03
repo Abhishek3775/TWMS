@@ -1,5 +1,87 @@
 // ─── Report Types ─────────────────────────────────────────────────────────────
 
+/** Single optimized dashboard API response (GET /reports/dashboard) */
+export interface DashboardData {
+  summary: {
+    totalWarehouses: number;
+    totalProducts: number;
+    totalVendors: number;
+    totalCustomers: number;
+    pendingPurchaseOrders: number;
+    totalStock: number;
+    totalStockSqft: number;
+    monthlySales: number;
+    monthlyPurchases: number;
+    ledgerEntriesLast30Days: number;
+  };
+  kpis: {
+    todaySales: number;
+    pendingOrders: number;
+    lowStockItems: number;
+    activePOs: number;
+    monthRevenue: number;
+    unpaidInvoices: number;
+  };
+  lowStock: DashboardLowStockItem[];
+  recentSales: DashboardRecentSale[];
+  recentPurchases: DashboardRecentPurchase[];
+  recentGRNs: DashboardRecentGRN[];
+  recentTransfers: DashboardRecentTransfer[];
+  stockByCategory: { category: string; boxes: number }[];
+}
+
+export interface DashboardRecentGRN {
+  id: string;
+  grn_number: string;
+  receipt_date: string;
+  status: string;
+  created_at: string;
+  vendor_name: string;
+  warehouse_name: string;
+}
+
+export interface DashboardRecentTransfer {
+  id: string;
+  transfer_number: string;
+  transfer_date: string;
+  status: string;
+  created_at: string;
+  from_warehouse_name: string;
+  to_warehouse_name: string;
+}
+
+export interface DashboardLowStockItem {
+  id: string;
+  warehouse_id: string;
+  product_id: string;
+  shade_id?: string | null;
+  current_stock_boxes: number;
+  reorder_level_boxes: number;
+  status: string;
+  alerted_at: string;
+  product_code: string;
+  product_name: string;
+  product_reorder?: number;
+}
+
+export interface DashboardRecentSale {
+  id: string;
+  so_number: string;
+  order_date: string;
+  status: string;
+  grand_total: number;
+  customer_name: string;
+}
+
+export interface DashboardRecentPurchase {
+  id: string;
+  po_number: string;
+  order_date: string;
+  status: string;
+  grand_total: number;
+  vendor_name: string;
+}
+
 export interface DashboardReport {
   totalRevenue: number;
   revenueChangePercent: number;
@@ -134,3 +216,35 @@ export interface StockSummaryParams {
   productId?: string;
   lowStock?: boolean;
 }
+
+// ─── Stock Transfer ───────────────────────────────────────────────────────────
+
+export type StockTransferStatus = 'draft' | 'in_transit' | 'received' | 'cancelled';
+
+export interface StockTransfer {
+  id: string;
+  tenant_id: string;
+  transfer_number: string;
+  from_warehouse_id: string;
+  to_warehouse_id: string;
+  status: StockTransferStatus;
+  transfer_date: string;
+  received_date: string | null;
+  vehicle_number: string | null;
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+export interface CreateStockTransferDto {
+  transfer_number: string;
+  from_warehouse_id: string;
+  to_warehouse_id: string;
+  status?: StockTransferStatus;
+  transfer_date: string;
+  received_date?: string | null;
+  vehicle_number?: string | null;
+  notes?: string | null;
+}
+
+export type UpdateStockTransferDto = Partial<CreateStockTransferDto>;

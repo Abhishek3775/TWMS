@@ -1,55 +1,66 @@
 import { useQuery } from '@tanstack/react-query';
-import axiosInstance from '@/api/axios';
+import { reportApi } from '@/api/reportApi';
+import type { DashboardData } from '@/types/stock.types';
 
+/**
+ * Single dashboard query — one API call returns summary, KPIs, low stock, recent sales/purchases, stock by category.
+ * Use data.summary, data.lowStock, data.recentSales, data.recentPurchases, data.stockByCategory, data.kpis.
+ */
+export function useDashboard() {
+  return useQuery({
+    queryKey: ['dashboard'],
+    queryFn: async (): Promise<DashboardData> => {
+      const res = await reportApi.getDashboard();
+      if (!res.success || !res.data) {
+        throw new Error(res.message ?? 'Failed to load dashboard');
+      }
+      return res.data;
+    },
+    staleTime: 60_000,
+  });
+}
+
+/** Dashboard KPIs only (convenience). Prefer useDashboard() for a single request. */
 export function useDashboardKPIs() {
-  return useQuery({
-    queryKey: ['dashboard-kpis'],
-    queryFn: async () => {
-      const res = await axiosInstance.get('/reports/dashboard');
-      return res.data.data; // { todaySales, pendingOrders, lowStockItems, monthRevenue, unpaidInvoices }
-    },
-    staleTime: 60_000, // Cache for 60 seconds
-  });
+  const q = useDashboard();
+  return {
+    ...q,
+    data: q.data?.kpis,
+  };
 }
 
+/** Recent sales orders (from dashboard payload). */
 export function useRecentSalesOrders() {
-  return useQuery({
-    queryKey: ['dashboard-recent-sales'],
-    queryFn: async () => {
-      try {
-        const res = await axiosInstance.get('/sales-orders', { params: { limit: 5 } });
-        return res.data?.data || [];
-      } catch (err) {
-        return [];
-      }
-    },
-  });
+  const q = useDashboard();
+  return {
+    ...q,
+    data: q.data?.recentSales ?? [],
+  };
 }
 
+/** Low stock alerts (from dashboard payload). */
 export function useLowStockAlerts() {
-  return useQuery({
-    queryKey: ['dashboard-low-stock'],
-    queryFn: async () => {
-      try {
-        const res = await axiosInstance.get('/alerts', { params: { limit: 5 } });
-        return res.data?.data || [];
-      } catch (err) {
-        return [];
-      }
-    },
-  });
+  const q = useDashboard();
+  return {
+    ...q,
+    data: q.data?.lowStock ?? [],
+  };
 }
 
+/** Stock by category for charts (from dashboard payload). */
 export function useStockByCategory() {
-  return useQuery({
-    queryKey: ['dashboard-stock-category'],
-    queryFn: async () => {
-      // Mock data for charts
-      return [
-        { category: 'Ceramic', boxes: 450 },
-        { category: 'Vitified', boxes: 820 },
-        { category: 'Porcelain', boxes: 300 },
-      ];
-    },
-  });
+  const q = useDashboard();
+  return {
+    ...q,
+    data: q.data?.stockByCategory ?? [],
+  };
+}
+
+/** Recent purchases (from dashboard payload). */
+export function useRecentPurchases() {
+  const q = useDashboard();
+  return {
+    ...q,
+    data: q.data?.recentPurchases ?? [],
+  };
 }

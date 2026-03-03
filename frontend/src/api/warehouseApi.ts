@@ -1,61 +1,66 @@
+import api from '@/lib/api';
 import axiosInstance from './axios';
-import { ApiResponse, ApiPaginatedResponse, PaginationParams } from '../types/api.types';
-import {
+import type { ApiResponse, ApiPaginatedResponse, PaginationParams } from '../types/api.types';
+import type {
   Warehouse, CreateWarehouseDto, UpdateWarehouseDto,
   Rack, CreateRackDto, UpdateRackDto,
   Category, CreateCategoryDto, UpdateCategoryDto,
   Shade, Batch,
 } from '../types/warehouse.types';
 
-// ─── Warehouse API ────────────────────────────────────────────────────────────
+// ─── Warehouse API (uses Express backend; api from @/lib/api) ──────────────────
 export const warehouseApi = {
   getAll: async (params?: PaginationParams): Promise<ApiPaginatedResponse<Warehouse>> => {
-    const res = await axiosInstance.get<ApiPaginatedResponse<Warehouse>>('/warehouses', { params });
+    const res = await api.get<ApiPaginatedResponse<Warehouse>>('/warehouses', { params });
     return res.data;
   },
-  getById: async (id: string): Promise<ApiResponse<Warehouse>> => {
-    const res = await axiosInstance.get<ApiResponse<Warehouse>>(`/warehouses/${id}`);
-    return res.data;
+  getById: async (id: string): Promise<Warehouse> => {
+    const res = await api.get<ApiResponse<Warehouse>>(`/warehouses/${id}`);
+    if (!res.data.success || !res.data.data) throw new Error(res.data.message ?? 'Warehouse not found');
+    return res.data.data;
   },
-  create: async (data: CreateWarehouseDto): Promise<ApiResponse<Warehouse>> => {
-    const res = await axiosInstance.post<ApiResponse<Warehouse>>('/warehouses', data);
-    return res.data;
+  create: async (data: CreateWarehouseDto): Promise<Warehouse> => {
+    const res = await api.post<ApiResponse<Warehouse>>('/warehouses', data);
+    if (!res.data.success || !res.data.data) throw new Error(res.data.message ?? 'Create failed');
+    return res.data.data;
   },
-  update: async (id: string, data: UpdateWarehouseDto): Promise<ApiResponse<Warehouse>> => {
-    const res = await axiosInstance.put<ApiResponse<Warehouse>>(`/warehouses/${id}`, data);
-    return res.data;
+  update: async (id: string, data: UpdateWarehouseDto): Promise<Warehouse> => {
+    const res = await api.put<ApiResponse<Warehouse>>(`/warehouses/${id}`, data);
+    if (!res.data.success || !res.data.data) throw new Error(res.data.message ?? 'Update failed');
+    return res.data.data;
   },
-  delete: async (id: string): Promise<ApiResponse<null>> => {
-    const res = await axiosInstance.delete<ApiResponse<null>>(`/warehouses/${id}`);
-    return res.data;
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/warehouses/${id}`);
   },
 };
 
-// ─── Rack API ─────────────────────────────────────────────────────────────────
+// ─── Rack API (uses Express backend; api from @/lib/api) ──────────────────────
 export const rackApi = {
-  getAll: async (params?: PaginationParams): Promise<ApiPaginatedResponse<Rack>> => {
-    const res = await axiosInstance.get<ApiPaginatedResponse<Rack>>('/racks', { params });
+  getAll: async (params?: PaginationParams & { warehouse_id?: string }): Promise<ApiPaginatedResponse<Rack>> => {
+    const res = await api.get<ApiPaginatedResponse<Rack>>('/racks', { params });
     return res.data;
   },
-  getById: async (id: string): Promise<ApiResponse<Rack>> => {
-    const res = await axiosInstance.get<ApiResponse<Rack>>(`/racks/${id}`);
-    return res.data;
+  getById: async (id: string): Promise<Rack> => {
+    const res = await api.get<ApiResponse<Rack>>(`/racks/${id}`);
+    if (!res.data.success || !res.data.data) throw new Error(res.data.message ?? 'Rack not found');
+    return res.data.data;
   },
-  create: async (data: CreateRackDto): Promise<ApiResponse<Rack>> => {
-    const res = await axiosInstance.post<ApiResponse<Rack>>('/racks', data);
-    return res.data;
+  create: async (data: CreateRackDto): Promise<Rack> => {
+    const res = await api.post<ApiResponse<Rack>>('/racks', data);
+    if (!res.data.success || !res.data.data) throw new Error(res.data.message ?? 'Create failed');
+    return res.data.data;
   },
-  update: async (id: string, data: UpdateRackDto): Promise<ApiResponse<Rack>> => {
-    const res = await axiosInstance.put<ApiResponse<Rack>>(`/racks/${id}`, data);
-    return res.data;
+  update: async (id: string, data: UpdateRackDto): Promise<Rack> => {
+    const res = await api.put<ApiResponse<Rack>>(`/racks/${id}`, data);
+    if (!res.data.success || !res.data.data) throw new Error(res.data.message ?? 'Update failed');
+    return res.data.data;
   },
-  delete: async (id: string): Promise<ApiResponse<null>> => {
-    const res = await axiosInstance.delete<ApiResponse<null>>(`/racks/${id}`);
-    return res.data;
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/racks/${id}`);
   },
 };
 
-// ─── Category API ─────────────────────────────────────────────────────────────
+// ─── Category API (may use different backend) ──────────────────────────────────
 export const categoryApi = {
   getAll: async (params?: PaginationParams): Promise<ApiPaginatedResponse<Category>> => {
     const res = await axiosInstance.get<ApiPaginatedResponse<Category>>('/categories', { params });

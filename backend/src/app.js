@@ -10,8 +10,11 @@ const logger = require('./utils/logger');
 const { apiLimiter } = require('./middlewares/rateLimiter.middleware');
 const { errorHandler, notFoundHandler } = require('./middlewares/error.middleware');
 const path = require('path');
-
-
+const vendorRoutes = require('./modules/vendors/vendor.routes');
+const customerRoutes = require('./modules/customers/customer.routes');
+const warehouseRoutes = require('./modules/warehouses/warehouse.routes');
+const rackRoutes = require('./modules/racks/rack.routes');
+const stockTransferRoutes = require('./modules/stock-transfers/transfer.routes');
 
 // ─── Route Imports ────────────────────────────────────────────────────────────
 const authRoutes = require('./modules/auth/routes');
@@ -155,11 +158,12 @@ app.use(`${API}/reports`, reportRoutes);
 app.use(`${API}/stock/ledger`, stockLedgerRoutes);
 app.use(`${API}/stock/summary`, stockSummaryRoutes);
 
-// Full CRUD modules (GET, POST, PUT, DELETE)
-app.use(`${API}/vendors`, buildCrudRouter('vendors', ['name', 'created_at']));
-app.use(`${API}/customers`, buildCrudRouter('customers', ['name', 'created_at']));
-app.use(`${API}/warehouses`, buildCrudRouter('warehouses', ['name', 'created_at']));
-app.use(`${API}/racks`, buildCrudRouter('racks', ['name', 'created_at']));
+// Full CRUD modules (GET, POST, PUT, DELETE) — Vendors uses full module (pagination, search, soft delete)
+app.use(`${API}/vendors`, vendorRoutes);
+app.use(`${API}/customers`, customerRoutes);
+app.use(`${API}/warehouses`, warehouseRoutes);
+app.use(`${API}/racks`, rackRoutes);
+app.use(`${API}/stock-transfers`, stockTransferRoutes);
 app.use(`${API}/purchase-orders`, buildCrudRouter('purchase_orders', ['order_date', 'created_at']));
 // app.use(`${API}/categories`, buildCrudRouter('product_categories', ['name']));
 app.use(`${API}/categories`, categoryRoutes);

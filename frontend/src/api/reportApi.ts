@@ -1,6 +1,7 @@
 import axiosInstance from './axios';
 import { ApiResponse, ApiPaginatedResponse } from '../types/api.types';
 import {
+  DashboardData,
   DashboardReport,
   GSTReportRow,
   RevenueReportRow,
@@ -23,11 +24,11 @@ import {
  */
 export const reportApi = {
   /**
-   * Dashboard summary — KPIs, recent orders, recent activity.
-   * Available to all authenticated roles.
+   * Full dashboard — summary, KPIs, low stock, recent sales/purchases, stock by category.
+   * Single optimized endpoint; available to all authenticated roles.
    */
-  getDashboard: async (): Promise<ApiResponse<DashboardReport>> => {
-    const res = await axiosInstance.get<ApiResponse<DashboardReport>>('/reports/dashboard');
+  getDashboard: async (): Promise<ApiResponse<DashboardData>> => {
+    const res = await axiosInstance.get<ApiResponse<DashboardData>>('/reports/dashboard');
     return res.data;
   },
 

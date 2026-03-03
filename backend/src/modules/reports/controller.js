@@ -3,8 +3,8 @@ const service = require('./service');
 const { success } = require('../../utils/response');
 
 const dashboard = async (req, res) => {
-  const data = await service.getDashboardKPIs(req.tenantId);
-  return success(res, data, 'Dashboard KPIs');
+  const data = await service.getDashboard(req.tenantId);
+  return success(res, data, 'Dashboard data');
 };
 const gstReport = async (req, res) => {
   const data = await service.getGSTReport(req.tenantId, req.query);
