@@ -37,8 +37,8 @@ export default function PurchaseReturnsPage() {
     { key: 'vendor_id', label: 'Vendor', type: 'select', required: true, options: vendors.map(v => ({ value: v.id, label: v.name })) },
     { key: 'warehouse_id', label: 'Warehouse', type: 'select', required: true, options: warehouses.map(w => ({ value: w.id, label: w.name })) },
     { key: 'status', label: 'Status', type: 'select', options: [{ value: 'draft', label: 'Draft' }, { value: 'approved', label: 'Approved' }, { value: 'dispatched', label: 'Dispatched' }, { value: 'cancelled', label: 'Cancelled' }], defaultValue: 'draft' },
-    { key: 'return_date', label: 'Return Date', type: 'date' },
-    { key: 'reason', label: 'Reason', type: 'text' },
+    { key: 'return_date', label: 'Return Date', type: 'date', required: true },
+    { key: 'reason', label: 'Reason', type: 'text', required: true, placeholder: 'Enter reason for return' },
     { key: 'total_boxes', label: 'Total Boxes', type: 'number', defaultValue: 0 },
     { key: 'total_amount', label: 'Total Amount', type: 'number', defaultValue: 0 },
     { key: 'notes', label: 'Notes', type: 'textarea' },
@@ -68,12 +68,14 @@ export default function PurchaseReturnsPage() {
     { key: 'return_date', label: 'Date', render: (r: any) => r.return_date ? new Date(r.return_date).toLocaleDateString() : '—' },
     { key: 'total_boxes', label: 'Boxes', render: (r: any) => r.total_boxes || 0 },
     { key: 'total_amount', label: 'Amount', render: (r: any) => `₹${Number(r.total_amount || 0).toLocaleString()}` },
-    { key: 'actions', label: 'Actions', render: (r: any) => (
-      <div className="flex gap-1">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(r); setDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleting(r)}><Trash2 className="h-4 w-4" /></Button>
-      </div>
-    )},
+    {
+      key: 'actions', label: 'Actions', render: (r: any) => (
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(r); setDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleting(r)}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      )
+    },
   ];
 
   return (

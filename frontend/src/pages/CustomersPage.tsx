@@ -13,13 +13,23 @@ import { toast } from "sonner";
 
 const fields: FieldDef[] = [
   { key: "name", label: "Customer Name", type: "text", required: true, placeholder: "Enter customer name" },
-  { key: "code", label: "Customer Code", type: "text", placeholder: "CUST-001" },
-  { key: "contact_person", label: "Contact Person", type: "text", placeholder: "Contact name" },
-  { key: "phone", label: "Phone", type: "text", placeholder: "Phone number" },
+  { key: "code", label: "Customer Code", type: "text", required: true, placeholder: "CUST-001" },
+  { key: "contact_person", label: "Contact Person", type: "text", required: true, placeholder: "Contact name" },
+  {
+    key: "phone",
+    label: "Phone",
+    type: "text",
+    required: true,
+    placeholder: "10-digit mobile number",
+    validation: {
+      pattern: /^[0-9]{10}$/,
+      message: "Phone number must be exactly 10 digits",
+    },
+  },
   { key: "email", label: "Email", type: "email", placeholder: "Email address" },
   { key: "gstin", label: "GSTIN", type: "text", placeholder: "22AAAAA0000A1Z5" },
   { key: "state_code", label: "State Code", type: "text", placeholder: "e.g. 09" },
-  { key: "billing_address", label: "Billing Address", type: "textarea", placeholder: "Billing address" },
+  { key: "billing_address", label: "Billing Address", type: "textarea", required: true, placeholder: "Billing address" },
   { key: "shipping_address", label: "Shipping Address", type: "textarea", placeholder: "Shipping address" },
   { key: "credit_limit", label: "Credit Limit (₹)", type: "number", defaultValue: 0, placeholder: "0" },
   { key: "payment_terms_days", label: "Payment Terms (Days)", type: "number", defaultValue: 0, placeholder: "0" },
@@ -74,7 +84,7 @@ export default function CustomersPage() {
         shipping_address: fd.shipping_address ? String(fd.shipping_address) : null,
         credit_limit: fd.credit_limit != null && fd.credit_limit !== "" ? Number(fd.credit_limit) : null,
         payment_terms_days: fd.payment_terms_days != null && fd.payment_terms_days !== "" ? Number(fd.payment_terms_days) : null,
-        is_active: fd.is_active ?? true,
+        is_active: Boolean(fd.is_active ?? true),
       };
       if (editing) return customerApi.update(editing.id, payload);
       return customerApi.create(payload);
@@ -133,7 +143,7 @@ export default function CustomersPage() {
         onAdd={() => { setEditing(null); setDialogOpen(true); }}
         addLabel="Add Customer"
       />
-      <DataTableShell<Customer>
+      <DataTableShell<any>
         data={customers}
         columns={columns}
         searchKey="name"
@@ -148,7 +158,7 @@ export default function CustomersPage() {
       <CrudFormDialog
         open={dialogOpen}
         onClose={() => { setDialogOpen(false); setEditing(null); }}
-        onSubmit={(d) => saveMutation.mutateAsync(d)}
+        onSubmit={async (d) => { await saveMutation.mutateAsync(d); }}
         fields={fields}
         title={editing ? "Edit Customer" : "New Customer"}
         initialData={editing}
@@ -157,7 +167,7 @@ export default function CustomersPage() {
       <DeleteConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
-        onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
+        onConfirm={async () => { if (deleting) await deleteMutation.mutateAsync(deleting.id); }}
         loading={deleteMutation.isPending}
       />
     </div>

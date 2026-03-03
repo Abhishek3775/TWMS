@@ -39,10 +39,20 @@ export default function DamageEntriesPage() {
   const fields: FieldDef[] = [
     { key: 'warehouse_id', label: 'Warehouse', type: 'select', required: true, options: warehouses.map(w => ({ value: w.id, label: w.name })) },
     { key: 'product_id', label: 'Product', type: 'select', required: true, options: products.map(p => ({ value: p.id, label: `${p.code} - ${p.name}` })) },
-    { key: 'damage_date', label: 'Damage Date', type: 'date' },
-    { key: 'damaged_boxes', label: 'Damaged Boxes', type: 'number', defaultValue: 0 },
+    { key: 'damage_date', label: 'Damage Date', type: 'date', required: true },
+    {
+      key: 'damaged_boxes',
+      label: 'Damaged Boxes',
+      type: 'number',
+      required: true,
+      defaultValue: 0,
+      validation: {
+        min: 1,
+        message: 'At least 1 damaged box required',
+      },
+    },
     { key: 'damaged_pieces', label: 'Damaged Pieces', type: 'number', defaultValue: 0 },
-    { key: 'damage_reason', label: 'Reason', type: 'text' },
+    { key: 'damage_reason', label: 'Reason', type: 'text', required: true, placeholder: 'Enter reason for damage' },
     { key: 'estimated_loss', label: 'Estimated Loss (₹)', type: 'number' },
     { key: 'notes', label: 'Notes', type: 'textarea' },
   ];
@@ -76,12 +86,14 @@ export default function DamageEntriesPage() {
     { key: 'damage_reason', label: 'Reason', render: (r: any) => r.damage_reason || '—' },
     { key: 'estimated_loss', label: 'Loss', render: (r: any) => r.estimated_loss ? `₹${Number(r.estimated_loss).toLocaleString()}` : '—' },
     { key: 'damage_date', label: 'Date', render: (r: any) => r.damage_date ? new Date(r.damage_date).toLocaleDateString() : '—' },
-    { key: 'actions', label: 'Actions', render: (r: any) => (
-      <div className="flex gap-1">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(r); setDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleting(r)}><Trash2 className="h-4 w-4" /></Button>
-      </div>
-    )},
+    {
+      key: 'actions', label: 'Actions', render: (r: any) => (
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(r); setDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleting(r)}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      )
+    },
   ];
 
   return (

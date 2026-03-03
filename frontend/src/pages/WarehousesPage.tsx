@@ -14,10 +14,20 @@ import { toast } from "sonner";
 const fields: FieldDef[] = [
   { key: "name", label: "Warehouse Name", type: "text", required: true, placeholder: "Main Warehouse" },
   { key: "code", label: "Code", type: "text", required: true, placeholder: "WH-MAIN" },
-  { key: "address", label: "Address", type: "textarea", placeholder: "Full address" },
-  { key: "city", label: "City", type: "text", placeholder: "City" },
-  { key: "state", label: "State", type: "text", placeholder: "State" },
-  { key: "pincode", label: "Pincode", type: "text", placeholder: "Pincode" },
+  { key: "address", label: "Address", type: "textarea", required: true, placeholder: "Full address" },
+  { key: "city", label: "City", type: "text", required: true, placeholder: "City" },
+  { key: "state", label: "State", type: "text", required: true, placeholder: "State" },
+  {
+    key: "pincode",
+    label: "Pincode",
+    type: "text",
+    required: true,
+    placeholder: "e.g. 395003",
+    validation: {
+      pattern: /^\d{6}$/,
+      message: "Pincode must be exactly 6 digits",
+    },
+  },
   { key: "is_active", label: "Status", type: "switch", defaultValue: true },
 ];
 

@@ -13,13 +13,23 @@ import { toast } from "sonner";
 
 const fields: FieldDef[] = [
   { key: "name", label: "Vendor Name", type: "text", required: true, placeholder: "Enter vendor name" },
-  { key: "code", label: "Vendor Code", type: "text", placeholder: "VND-001" },
-  { key: "contact_person", label: "Contact Person", type: "text", placeholder: "Enter contact person name" },
-  { key: "phone", label: "Phone", type: "text", placeholder: "Enter phone number" },
+  { key: "code", label: "Vendor Code", type: "text", required: true, placeholder: "VND-001" },
+  { key: "contact_person", label: "Contact Person", type: "text", required: true, placeholder: "Enter contact person name" },
+  {
+    key: "phone",
+    label: "Phone",
+    type: "text",
+    required: true,
+    placeholder: "10-digit mobile number",
+    validation: {
+      pattern: /^[0-9]{10}$/,
+      message: "Phone number must be exactly 10 digits",
+    },
+  },
   { key: "email", label: "Email", type: "email", placeholder: "Enter email address" },
   { key: "gstin", label: "GSTIN", type: "text", placeholder: "22AAAAA0000A1Z5" },
   { key: "pan", label: "PAN", type: "text", placeholder: "ABCDE1234F" },
-  { key: "address", label: "Address", type: "textarea", placeholder: "Enter vendor address" },
+  { key: "address", label: "Address", type: "textarea", required: true, placeholder: "Enter vendor address" },
   { key: "payment_terms_days", label: "Payment Terms (Days)", type: "number", defaultValue: 30, placeholder: "Enter payment terms in days" },
   { key: "is_active", label: "Status", type: "switch", defaultValue: true },
 ];
@@ -71,7 +81,7 @@ export default function VendorsPage() {
         pan: fd.pan ? String(fd.pan) : null,
         address: fd.address ? String(fd.address) : null,
         payment_terms_days: Number(fd.payment_terms_days) || 30,
-        is_active: fd.is_active ?? true,
+        is_active: Boolean(fd.is_active ?? true),
       };
       if (editing) {
         return vendorApi.update(editing.id, payload);
@@ -135,7 +145,7 @@ export default function VendorsPage() {
         addLabel="Add Vendor"
       />
 
-      <DataTableShell<Vendor>
+      <DataTableShell<any>
         data={vendors}
         columns={columns}
         searchKey="name"
@@ -151,7 +161,7 @@ export default function VendorsPage() {
       <CrudFormDialog
         open={dialogOpen}
         onClose={() => { setDialogOpen(false); setEditing(null); }}
-        onSubmit={(d) => saveMutation.mutateAsync(d)}
+        onSubmit={async (d) => { await saveMutation.mutateAsync(d); }}
         fields={fields}
         title={editing ? "Edit Vendor" : "New Vendor"}
         initialData={editing}
@@ -161,7 +171,7 @@ export default function VendorsPage() {
       <DeleteConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
-        onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
+        onConfirm={async () => { if (deleting) await deleteMutation.mutateAsync(deleting.id); }}
         loading={deleteMutation.isPending}
       />
     </div>

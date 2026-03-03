@@ -15,10 +15,50 @@ import { toast } from "sonner";
 const fields: FieldDef[] = [
   { key: "warehouse_id", label: "Warehouse", type: "select", required: true, options: [] },
   { key: "name", label: "Rack Name", type: "text", required: true, placeholder: "Rack A1" },
-  { key: "aisle", label: "Aisle", type: "text", placeholder: "A" },
-  { key: "row", label: "Row", type: "text", placeholder: "1" },
-  { key: "level", label: "Level", type: "text", placeholder: "1" },
-  { key: "capacity_boxes", label: "Capacity (boxes)", type: "number", placeholder: "100" },
+  {
+    key: "aisle",
+    label: "Aisle",
+    type: "text",
+    required: true,
+    placeholder: "e.g. A",
+    validation: {
+      minLength: 1,
+      message: "Aisle is required",
+    },
+  },
+  {
+    key: "row",
+    label: "Row",
+    type: "text",
+    required: true,
+    placeholder: "e.g. 1",
+    validation: {
+      minLength: 1,
+      message: "Row is required",
+    },
+  },
+  {
+    key: "level",
+    label: "Level",
+    type: "text",
+    required: true,
+    placeholder: "e.g. 1",
+    validation: {
+      minLength: 1,
+      message: "Level is required",
+    },
+  },
+  {
+    key: "capacity_boxes",
+    label: "Capacity (boxes)",
+    type: "number",
+    required: true,
+    placeholder: "e.g. 100",
+    validation: {
+      min: 1,
+      message: "Capacity must be at least 1 box",
+    },
+  },
   { key: "qr_code", label: "QR Code", type: "text", placeholder: "Optional" },
   { key: "is_active", label: "Status", type: "switch", defaultValue: true },
 ];
@@ -74,9 +114,8 @@ export default function RacksPage() {
         level: fd.level ? String(fd.level) : null,
         capacity_boxes: fd.capacity_boxes != null && fd.capacity_boxes !== "" ? Number(fd.capacity_boxes) : null,
         qr_code: fd.qr_code ? String(fd.qr_code) : null,
-        is_active: fd.is_active ?? true,
       };
-      if (editing) return rackApi.update(editing.id, payload);
+      if (editing) return rackApi.update(editing.id, { ...payload, is_active: Boolean(fd.is_active ?? true) });
       return rackApi.create(payload);
     },
     onSuccess: () => {
@@ -137,7 +176,7 @@ export default function RacksPage() {
         onAdd={() => { setEditing(null); setDialogOpen(true); }}
         addLabel="Add Rack"
       />
-      <DataTableShell<Rack>
+      <DataTableShell<any>
         data={racks}
         columns={columns}
         searchKey="name"
@@ -152,7 +191,7 @@ export default function RacksPage() {
       <CrudFormDialog
         open={dialogOpen}
         onClose={() => { setDialogOpen(false); setEditing(null); }}
-        onSubmit={(d) => saveMutation.mutateAsync(d)}
+        onSubmit={async (d) => { await saveMutation.mutateAsync(d); }}
         fields={formFields}
         title={editing ? "Edit Rack" : "New Rack"}
         initialData={editing}
@@ -161,7 +200,7 @@ export default function RacksPage() {
       <DeleteConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
-        onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
+        onConfirm={async () => { if (deleting) await deleteMutation.mutateAsync(deleting.id); }}
         loading={deleteMutation.isPending}
       />
     </div>
