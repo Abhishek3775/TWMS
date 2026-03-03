@@ -24,15 +24,22 @@ const create = async (req, res) => {
   return created(res, product, 'Product created');
 };
 
-const update = async (req, res) => {
+const update = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const old = await service.getById(id, req.tenantId);
     if (req.file) {
-    req.body.imageUrl = `/uploads/${req.file.filename}`;
+      req.body.imageUrl = `/uploads/${req.file.filename}`;
+    } else if (old && old.image_url) {
+      req.body.imageUrl = old.image_url;
+    }
+    const product = await service.update(id, req.tenantId, req.body);
+    const meta = extractRequestMeta(req);
+    await writeAuditLog({ tenantId: req.tenantId, userId: req.user.id, action: 'UPDATE', tableName: 'products', recordId: product.id, oldValues: old, newValues: req.body, ...meta });
+    return success(res, product, 'Product updated');
+  } catch (err) {
+    next(err);
   }
-  const old = await service.getById(req.params.id, req.tenantId);
-  const product = await service.update(req.params.id, req.tenantId, req.body);
-  const meta = extractRequestMeta(req);
-  await writeAuditLog({ tenantId: req.tenantId, userId: req.user.id, action: 'UPDATE', tableName: 'products', recordId: product.id, oldValues: old, newValues: req.body, ...meta });
-  return success(res, product, 'Product updated');
 };
 
 const remove = async (req, res) => {

@@ -62,7 +62,11 @@ const create = async (data) => {
   return findById(id, data.tenantId);
 };
 
+const toNum = (v) => (v === undefined || v === null || v === '') ? null : Number(v);
+const toBool = (v) => (v === true || v === 1 || v === '1' || String(v).toLowerCase() === 'true' ? 1 : 0);
+
 const update = async (id, tenantId, data) => {
+  const isActive = data.isActive !== undefined ? toBool(data.isActive) : 1;
   await query(
     `UPDATE products SET
        category_id = ?, name = ?, code = ?, description = ?,
@@ -71,13 +75,32 @@ const update = async (id, tenantId, data) => {
        finish = ?, material = ?, brand = ?, hsn_code = ?, gst_rate = ?, mrp = ?,
        reorder_level_boxes = ?, barcode = ?, image_url = ?, is_active = ?, updated_at = NOW()
      WHERE id = ? AND tenant_id = ?`,
-    [data.categoryId || null, data.name, data.code, data.description || null,
-     data.sizeLengthMm, data.sizeWidthMm, data.sizeThicknessMm || null, data.sizeLabel,
-     data.piecesPerBox, data.sqftPerBox, data.sqmtPerBox || null, data.weightPerBoxKg || null,
-     data.finish || null, data.material || null, data.brand || null, data.hsnCode || null,
-     data.gstRate, data.mrp || null, data.reorderLevelBoxes,
-     data.barcode || null, data.imageUrl || null, data.isActive !== undefined ? data.isActive : true,
-     id, tenantId]
+    [
+      data.categoryId || null,
+      data.name,
+      data.code,
+      data.description ?? null,
+      toNum(data.sizeLengthMm) ?? 0,
+      toNum(data.sizeWidthMm) ?? 0,
+      toNum(data.sizeThicknessMm),
+      data.sizeLabel ?? null,
+      toNum(data.piecesPerBox) ?? 0,
+      toNum(data.sqftPerBox) ?? 0,
+      toNum(data.sqmtPerBox),
+      toNum(data.weightPerBoxKg),
+      data.finish ?? null,
+      data.material ?? null,
+      data.brand ?? null,
+      data.hsnCode ?? null,
+      toNum(data.gstRate) ?? 18,
+      toNum(data.mrp),
+      toNum(data.reorderLevelBoxes) ?? 0,
+      data.barcode ?? null,
+      data.imageUrl ?? null,
+      isActive,
+      id,
+      tenantId,
+    ]
   );
   return findById(id, tenantId);
 };

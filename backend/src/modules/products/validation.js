@@ -22,7 +22,7 @@ const productSchema = Joi.object({
   mrp:               Joi.number().positive().optional().allow(null),
   reorderLevelBoxes: Joi.number().integer().min(0).default(0),
   barcode:           Joi.string().max(100).optional().allow(null, ''),
-  imageUrl:          Joi.string().uri().max(2000).optional().allow(null, ''),
+  imageUrl:          Joi.string().max(2000).optional().allow(null, ''),
   isActive:          Joi.boolean().default(true),
 });
 
@@ -72,9 +72,14 @@ const updateProductSchema = Joi.object({
 
   isActive:          Joi.boolean().optional(),
 
-}).min(1);   // 🔥 At least 1 field required
+}).min(1);
+
 const validate = (schema) => (req, res, next) => {
-  const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
+  const { error, value } = schema.validate(req.body, {
+    abortEarly: false,
+    stripUnknown: true,
+    convert: true,
+  });
   if (error) {
     return res.status(422).json({
       success: false,

@@ -45,8 +45,9 @@ const getAllWarehouses = async (tenantId, options = {}) => {
   const order = sortOrder === 'ASC' ? 'ASC' : 'DESC';
   const whereSql = conditions.join(' AND ');
   const baseSql = `SELECT ${SELECT_COLUMNS} FROM warehouses WHERE ${whereSql}`;
+  // LIMIT/OFFSET interpolated (validated integers) — MySQL 8.0.22+ rejects them as bound params
   const [rows, countResult] = await Promise.all([
-    query(`${baseSql} ORDER BY ${orderBy} ${order} LIMIT ? OFFSET ?`, [...params, limit, offset]),
+    query(`${baseSql} ORDER BY ${orderBy} ${order} LIMIT ${limit} OFFSET ${offset}`, params),
     query(`SELECT COUNT(*) AS total FROM warehouses WHERE ${whereSql}`, params),
   ]);
   const total = countResult[0]?.total ?? 0;

@@ -2,6 +2,7 @@
 
 const { v4: uuidv4 } = require('uuid');
 const transferService = require('./transfer.service');
+const transferExecutionService = require('./transferExecution.service');
 const { createTransferSchema, updateTransferSchema } = require('./transfer.validation');
 const { success, created, paginated } = require('../../utils/response');
 const { AppError } = require('../../middlewares/error.middleware');
@@ -83,10 +84,28 @@ const deleteTransfer = async (req, res, next) => {
   }
 };
 
+/**
+ * Execute (dispatch) transfer — moves stock from source to destination warehouse.
+ * Transaction-safe; uses postStockMovement only (no direct stock edit).
+ */
+const executeTransfer = async (req, res, next) => {
+  try {
+    const transfer = await transferExecutionService.executeTransfer(
+      req.params.id,
+      req.tenantId,
+      req.user.id
+    );
+    return success(res, transfer, 'Transfer executed — stock moved');
+  } catch (e) {
+    next(e);
+  }
+};
+
 module.exports = {
   createTransfer,
   getTransfers,
   getTransferById,
   updateTransfer,
   deleteTransfer,
+  executeTransfer,
 };

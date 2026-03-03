@@ -27,6 +27,8 @@ const createCustomer = async (req, res, next) => {
 
 const getCustomers = async (req, res, next) => {
   try {
+    console.log("Tenant ID from request:", req.tenantId);
+
     const { data, meta } = await customerService.getAllCustomers(req.tenantId, req.query);
     return paginated(res, data, meta, 'Customers fetched');
   } catch (e) {

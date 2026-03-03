@@ -24,7 +24,6 @@ const getPool = () => {
       enableKeepAlive: true,
       keepAliveInitialDelay: 10000,
       connectTimeout: 10000,
-      acquireTimeout: 10000,
     });
     logger.info(`MySQL pool created [host=${env.db.host} db=${env.db.database} limit=${env.db.connectionLimit}]`);
   }

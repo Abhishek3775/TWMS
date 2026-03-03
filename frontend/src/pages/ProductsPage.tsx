@@ -126,9 +126,9 @@ export default function ProductsPage() {
 
     { key: "description", label: "Description", type: "textarea" },
 
-    { key: "is_active", label: "Status", type: "switch", defaultValue: true },
+    { key: "is_active", label: "Status", type: "switch", defaultValue: true }
 
-    { key: "image", label: "Tile Image", type: "file" },
+    // { key: "image", label: "Tile Image", type: "file" },
   ];
 
   /* ===============================
@@ -136,54 +136,43 @@ export default function ProductsPage() {
   =============================== */
 
   const saveMutation = useMutation({
-    mutationFn: async (formData: Record<string, any>) => {
-      console.log("🔥 RAW FORM DATA:", formData);
-
+    mutationFn: async (formData: Record<string, unknown>) => {
       const data = new FormData();
 
-      // Basic
-      data.append("categoryId", formData.category_id);
-      data.append("name", formData.name);
-      data.append("code", formData.code);
-      data.append("description", formData.description || "");
+      data.append("categoryId", String(formData.category_id ?? ""));
+      data.append("name", String(formData.name ?? ""));
+      data.append("code", String(formData.code ?? ""));
+      data.append("description", String(formData.description ?? ""));
 
-      // Size
-      data.append("sizeLabel", formData.size_label);
-      data.append("sizeLengthMm", formData.size_length_mm);
-      data.append("sizeWidthMm", formData.size_width_mm);
-      data.append("sizeThicknessMm", formData.size_thickness_mm || "");
+      data.append("sizeLabel", String(formData.size_label ?? ""));
+      data.append("sizeLengthMm", String(formData.size_length_mm ?? ""));
+      data.append("sizeWidthMm", String(formData.size_width_mm ?? ""));
+      data.append("sizeThicknessMm", formData.size_thickness_mm != null ? String(formData.size_thickness_mm) : "");
 
-      // Box
-      data.append("piecesPerBox", formData.pieces_per_box);
-      data.append("sqftPerBox", formData.sqft_per_box);
-      data.append("sqmtPerBox", formData.sqmt_per_box || "");
-      data.append("weightPerBoxKg", formData.weight_per_box_kg || "");
+      data.append("piecesPerBox", String(formData.pieces_per_box ?? ""));
+      data.append("sqftPerBox", String(formData.sqft_per_box ?? ""));
+      data.append("sqmtPerBox", formData.sqmt_per_box != null ? String(formData.sqmt_per_box) : "");
+      data.append("weightPerBoxKg", formData.weight_per_box_kg != null ? String(formData.weight_per_box_kg) : "");
 
-      // Extra
-      data.append("finish", formData.finish || "");
-      data.append("material", formData.material || "");
-      data.append("brand", formData.brand || "");
-      data.append("hsnCode", formData.hsn_code || "");
-      data.append("gstRate", formData.gst_rate);
-      data.append("mrp", formData.mrp || "");
-      data.append("reorderLevelBoxes", formData.reorder_level_boxes || 0);
-      data.append("barcode", formData.barcode || "");
-      data.append("isActive", formData.is_active);
+      data.append("finish", String(formData.finish ?? ""));
+      data.append("material", String(formData.material ?? ""));
+      data.append("brand", String(formData.brand ?? ""));
+      data.append("hsnCode", String(formData.hsn_code ?? ""));
+      data.append("gstRate", String(formData.gst_rate ?? "18"));
+      data.append("mrp", formData.mrp != null ? String(formData.mrp) : "");
+      data.append("reorderLevelBoxes", String(formData.reorder_level_boxes ?? "0"));
+      data.append("barcode", String(formData.barcode ?? ""));
+      data.append("isActive", formData.is_active === true || formData.is_active === 1 ? "true" : "false");
 
-      // Image Upload
       if (formData.image instanceof File) {
-        console.log("🖼 Selected Image:", formData.image.name);
         data.append("image", formData.image);
         setPreviewUrl(URL.createObjectURL(formData.image));
       }
 
-      for (let pair of data.entries()) {
-        console.log("📦 Sending:", pair[0], pair[1]);
+      if (editing?.id) {
+        return productApi.update(editing.id, data);
       }
-
-      return editing
-        ? productApi.update(editing.id, data)
-        : productApi.create(data);
+      return productApi.create(data);
     },
 
     onSuccess: () => {
@@ -194,7 +183,13 @@ export default function ProductsPage() {
       toast.success(editing ? "Product updated" : "Product created");
     },
 
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: { response?: { data?: { error?: { message?: string }; message?: string } }; message?: string }) => {
+      const msg =
+        e?.response?.data?.error?.message ??
+        e?.response?.data?.message ??
+        (e?.message || "Failed to save product");
+      toast.error(msg);
+    },
   });
 
   /* ===============================

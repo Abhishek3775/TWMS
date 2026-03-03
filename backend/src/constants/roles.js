@@ -50,6 +50,9 @@ const PERMISSIONS = {
   'POST /grn':               [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.WAREHOUSE_MANAGER],
   'POST /grn/:id/post':      [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.WAREHOUSE_MANAGER],
 
+  // Stock Transfers (execute = dispatch stock)
+  'POST /stock-transfers/:id/execute': [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.WAREHOUSE_MANAGER],
+
   // Stock Adjustments
   'POST /stock-adjustments':           [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.WAREHOUSE_MANAGER],
   'PUT /stock-adjustments/:id/approve':[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.WAREHOUSE_MANAGER],
